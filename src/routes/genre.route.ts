@@ -28,12 +28,12 @@ export const genre = new Hono();
 
 genre.get("/:type", async (c) => {
   const type = c.req.param("type");
-  const { 
+  const {
     name = "", // e.g., "rock", "pop", "classical"
     lang = "",
     page = "1",
     n = "20",
-    raw = ""
+    raw = "",
   } = c.req.query();
 
   if (!name) {
@@ -44,19 +44,20 @@ genre.get("/:type", async (c) => {
     throw new Error("Invalid type. Must be one of: songs, albums, playlists");
   }
 
-  const endpoint = config.endpoint.search[type as keyof typeof config.endpoint.search];
+  const endpoint =
+    config.endpoint.search[type as keyof typeof config.endpoint.search];
   if (!endpoint) {
     throw new Error(`Unsupported search type: ${type}`);
   }
 
   const result = await api<SearchResponse>(endpoint, {
-    query: { 
+    query: {
       q: name,
       type: "genre",
       language: validLangs(lang),
       page,
-      n
-    }
+      n,
+    },
   });
 
   if (!result?.results?.length) {
@@ -70,8 +71,8 @@ genre.get("/:type", async (c) => {
   const response: CustomResponse<typeof result> = {
     status: "Success",
     message: `✅ ${type} for genre '${name}' fetched successfully`,
-    data: result
+    data: result,
   };
 
   return c.json(response);
-}); 
+});

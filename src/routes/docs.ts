@@ -1,8 +1,8 @@
-import { Hono } from 'hono';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { marked } from 'marked';
-import { config } from '../lib/config';
+import { Hono } from "hono";
+import { readFileSync } from "fs";
+import { join } from "path";
+import { marked } from "marked";
+import { config } from "../lib/config";
 
 const template = `
 <!DOCTYPE html>
@@ -70,32 +70,33 @@ const template = `
 
 const docs = new Hono();
 
-docs.get('/docs', async (c) => {
-    try {
-        // Read the markdown file
-        const mdPath = join(process.cwd(), 'read.md');
-        const markdown = readFileSync(mdPath, 'utf-8');
+docs.get("/docs", async (c) => {
+  try {
+    // Read the markdown file
+    const mdPath = join(process.cwd(), "read.md");
+    const markdown = readFileSync(mdPath, "utf-8");
 
-        // Convert markdown to HTML using marked
-        const content = marked.parse(markdown);
+    // Convert markdown to HTML using marked
+    const content = marked.parse(markdown);
 
-        // Replace the placeholder with actual base URL from config
-        const html = template.replace('{{content}}', content as string)
-                           .replace(/https:\/\/your-api-base-url\.com/g, config.urls.siteUrl);
+    // Replace the placeholder with actual base URL from config
+    const html = template
+      .replace("{{content}}", content as string)
+      .replace(/https:\/\/your-api-base-url\.com/g, config.urls.siteUrl);
 
-        // Send HTML response
-        return c.html(html);
-    } catch {
-        c.status(500);
-        return c.json({ 
-            status: 'Failed',
-            message: 'Failed to load documentation',
-            data: null
-        });
-    }
+    // Send HTML response
+    return c.html(html);
+  } catch {
+    c.status(500);
+    return c.json({
+      status: "Failed",
+      message: "Failed to load documentation",
+      data: null,
+    });
+  }
 });
 
 // Redirect root to docs
-docs.get('/', (c) => c.redirect('/docs'));
+docs.get("/", (c) => c.redirect("/docs"));
 
-export default docs; 
+export default docs;

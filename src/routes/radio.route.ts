@@ -91,12 +91,15 @@ radio.get("/songs", async (c) => {
   if (!stationid) throw new Error("Radio Station ID is Required!");
 
   // First verify if station exists
-  const stationResult: RadioStationRequest = await api(config.endpoint.radio.entity, {
-    query: { 
-      entity_id: stationid,
-      entity_type: "radio"
+  const stationResult: RadioStationRequest = await api(
+    config.endpoint.radio.entity,
+    {
+      query: {
+        entity_id: stationid,
+        entity_type: "radio",
+      },
     }
-  });
+  );
 
   if (!stationResult || stationResult.error) {
     throw new Error("Radio station not found");

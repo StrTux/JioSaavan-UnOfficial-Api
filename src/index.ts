@@ -20,7 +20,7 @@ import {
   search,
   show,
   song,
-  trending
+  trending,
 } from "./routes";
 
 const app = new Hono({ strict: false });

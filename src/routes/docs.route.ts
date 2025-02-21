@@ -11,14 +11,14 @@ docs.get("/", async (c) => {
     const mdPath = join(process.cwd(), "read.md");
     const markdown = readFileSync(mdPath, "utf-8");
     const content = await marked.parse(markdown);
-    
+
     return c.html(generateDocsHtml(content));
   } catch {
     c.status(500);
-    return c.json({ 
+    return c.json({
       status: "Failed",
       message: "Failed to load documentation",
-      data: null
+      data: null,
     });
   }
 });
@@ -63,4 +63,4 @@ function generateDocsHtml(content: string) {
 </html>`;
 }
 
-export { docs }; 
+export { docs };

@@ -14,13 +14,13 @@ export const trending = new Hono();
 
 trending.get("/category/:type", async (c) => {
   const type = c.req.param("type");
-  const { 
+  const {
     category = "popularity", // popularity, latest, alphabetical
     lang = "",
     page = "1",
     n = "20",
     raw = "",
-    mini = ""
+    mini = "",
   } = c.req.query();
 
   if (!["song", "album", "playlist"].includes(type)) {
@@ -30,28 +30,29 @@ trending.get("/category/:type", async (c) => {
   let apiResult: TrendingRequest;
   try {
     apiResult = await api(config.endpoint.get.trending, {
-      query: { 
+      query: {
         entity_type: type,
         category,
         entity_language: validLangs(lang),
         page,
-        n
-      }
+        n,
+      },
     });
 
     if (!apiResult || !Array.isArray(apiResult) || !apiResult.length) {
       // Try without category if initial request fails
       apiResult = await api(config.endpoint.get.trending, {
-        query: { 
+        query: {
           entity_type: type,
           entity_language: validLangs(lang),
           page,
-          n
-        }
+          n,
+        },
       });
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
     throw new Error(`Failed to fetch trending ${type}s: ${errorMessage}`);
   }
 
@@ -67,8 +68,8 @@ trending.get("/category/:type", async (c) => {
   const response: CustomResponse<TrendingResponse> = {
     status: "Success",
     message: `✅ Trending ${type}s by ${category} fetched successfully`,
-    data: transformedData
+    data: transformedData,
   };
 
   return c.json(response);
-}); 
+});

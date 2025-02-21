@@ -96,7 +96,7 @@ playlist.get("/recommend", async (c) => {
 
   // First verify if playlist exists
   const playlist: PlaylistRequest = await api(i, {
-    query: { listid }
+    query: { listid },
   });
 
   if (!playlist || !playlist.id) {
@@ -104,7 +104,7 @@ playlist.get("/recommend", async (c) => {
   }
 
   const result = await api<PlaylistRequest[]>(r, {
-    query: { listid, language: validLangs(lang) }
+    query: { listid, language: validLangs(lang) },
   });
 
   if (!result || !Array.isArray(result) || !result.length) {

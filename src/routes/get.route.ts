@@ -268,7 +268,7 @@ get.get("/lyrics", async (c) => {
 
   // First verify if song exists
   const song: SongRequest = await api(config.endpoint.song.id, {
-    query: { pids: lyrics_id }
+    query: { pids: lyrics_id },
   });
 
   if (!song || !song.more_info?.has_lyrics) {

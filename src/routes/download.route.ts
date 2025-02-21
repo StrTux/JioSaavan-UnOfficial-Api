@@ -24,10 +24,12 @@ download.get("/", async (c) => {
   let result: SongRequest;
   try {
     result = await api(config.endpoint.song.id, {
-      query: { pids: id }
+      query: { pids: id },
     });
   } catch (error) {
-    throw new Error(`Song not found: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Song not found: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 
   if (!result || !result.more_info?.encrypted_media_url) {
@@ -36,14 +38,18 @@ download.get("/", async (c) => {
 
   // Validate quality parameter if provided
   if (quality && !["96_KBPS", "160_KBPS", "320_KBPS"].includes(quality)) {
-    throw new Error("Invalid quality. Must be one of: 96_KBPS, 160_KBPS, 320_KBPS");
+    throw new Error(
+      "Invalid quality. Must be one of: 96_KBPS, 160_KBPS, 320_KBPS"
+    );
   }
 
   let downloadUrls: Quality;
   try {
     downloadUrls = createDownloadLinks(result.more_info.encrypted_media_url);
   } catch (error) {
-    throw new Error(`Failed to generate download URLs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to generate download URLs: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 
   if (!Array.isArray(downloadUrls) || !downloadUrls.length) {
@@ -51,9 +57,11 @@ download.get("/", async (c) => {
   }
 
   if (quality) {
-    const qualityUrl = downloadUrls.find(url => url.quality === quality);
+    const qualityUrl = downloadUrls.find((url) => url.quality === quality);
     if (!qualityUrl) {
-      throw new Error(`Quality ${quality} not available for this song. Available qualities: ${downloadUrls.map(u => u.quality).join(", ")}`);
+      throw new Error(
+        `Quality ${quality} not available for this song. Available qualities: ${downloadUrls.map((u) => u.quality).join(", ")}`
+      );
     }
   }
 
@@ -64,10 +72,10 @@ download.get("/", async (c) => {
   const response: CustomResponse<typeof downloadUrls> = {
     status: "Success",
     message: "✅ Download URLs fetched successfully",
-    data: quality 
-      ? downloadUrls.filter(url => url.quality === quality)
-      : downloadUrls
+    data: quality
+      ? downloadUrls.filter((url) => url.quality === quality)
+      : downloadUrls,
   };
 
   return c.json(response);
-}); 
+});
