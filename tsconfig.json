@@ -4,11 +4,13 @@
     "module": "CommonJS",
     "skipLibCheck": true,
     "lib": ["esnext"],
+    "outDir": "./dist",
+    "rootDir": "./src",
 
     /* Bundler mode */
     "moduleResolution": "node",
     "esModuleInterop": true,
-    "types": ["bun-types", "@cloudflare/workers-types"],
+    "types": ["bun-types", "@cloudflare/workers-types", "node"],
 
     /* Linting */
     "strict": true,
@@ -22,5 +24,6 @@
     //   "@/*": ["src/*"]
     // }
   },
-  "include": ["_api", "src", "test", ".env"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "test", "_api"]
 }
