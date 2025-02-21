@@ -1,1 +1,1 @@
-web: npm run start 
+web: bun ./dist/index.js 
