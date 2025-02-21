@@ -4,7 +4,17 @@ import { config } from "../lib/config";
 import { parseBool, validLangs } from "../lib/utils";
 import { CustomResponse } from "../types/response";
 
-interface LanguageResponse extends Array<any> {
+interface LanguageItem {
+  id: string;
+  title: string;
+  type: string;
+  language: string;
+  url: string;
+  image: string;
+  [key: string]: unknown;
+}
+
+interface LanguageResponse extends Array<LanguageItem> {
   length: number;
 }
 

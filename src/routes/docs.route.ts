@@ -13,7 +13,7 @@ docs.get("/", async (c) => {
     const content = await marked.parse(markdown);
     
     return c.html(generateDocsHtml(content));
-  } catch (error) {
+  } catch {
     c.status(500);
     return c.json({ 
       status: "Failed",

@@ -4,9 +4,20 @@ import { config } from "../lib/config";
 import { parseBool, validLangs } from "../lib/utils";
 import { CustomResponse } from "../types/response";
 
+interface GenreResult {
+  id: string;
+  title: string;
+  type: string;
+  language: string;
+  url: string;
+  image: string;
+  [key: string]: unknown;
+}
+
 interface SearchResponse {
-  results: any[];
-  [key: string]: any;
+  results: GenreResult[];
+  position: number;
+  [key: string]: unknown;
 }
 
 export const genre = new Hono();

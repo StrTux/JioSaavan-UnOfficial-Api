@@ -21,6 +21,7 @@ async function testAPI(endpoint, params = '', options = {}) {
     } else if (contentType && contentType.includes('text/html')) {
       const text = await response.text();
       console.log('Response: [HTML Content]');
+      console.log(text.substring(0, 200) + '...'); // Show first 200 chars of HTML
     } else {
       console.log('Response: Unknown content type:', contentType);
     }

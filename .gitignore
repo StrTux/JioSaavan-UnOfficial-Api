@@ -2,3 +2,4 @@ node_modules/
 
 .vercel
 *.local
+node_modules

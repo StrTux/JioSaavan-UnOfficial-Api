@@ -85,7 +85,7 @@ docs.get('/docs', async (c) => {
 
         // Send HTML response
         return c.html(html);
-    } catch (error) {
+    } catch {
         c.status(500);
         return c.json({ 
             status: 'Failed',
