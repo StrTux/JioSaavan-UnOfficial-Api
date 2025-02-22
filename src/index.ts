@@ -2,9 +2,11 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
+import { serve } from "@hono/node-server";
 
 import { config } from "./lib/config";
 import { camelCaseMiddleware, rateLimitMiddleware } from "./lib/middleware";
+import { cacheMiddleware } from "./lib/cache";
 import {
   album,
   artist,
@@ -30,10 +32,18 @@ const app = new Hono({ strict: false });
  * -----------------------------------------------------------------------------------------------*/
 app.use(
   "*",
-  cors(),
+  cors({
+    origin: '*',
+    allowHeaders: ['Content-Type', 'Authorization'],
+    allowMethods: ['GET', 'OPTIONS'],
+    exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
+    maxAge: 600,
+    credentials: true,
+  }),
   prettyJSON(),
   logger(),
   rateLimitMiddleware(),
+  cacheMiddleware(),
   camelCaseMiddleware()
 );
 
@@ -85,18 +95,30 @@ app.notFound((c) => {
 
 /* 500 */
 app.onError((err, c) => {
-  c.status(400);
+  console.error('Server Error:', err);
+  c.status(500);
   return c.json({
-    status: "Failed",
-    message: err.message,
-    data: null,
+    status: "Error",
+    message: "Internal Server Error",
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
-const server = {
-  port: +(process.env.PORT ?? 3000),
-  fetch: app.fetch,
-};
-
+// Export the app instance
 export { app };
-export default server;
+
+// Export the handler for Vercel
+export default async function handler(req: Request): Promise<Response> {
+  return app.fetch(req);
+}
+
+// Development server
+if (process.env.NODE_ENV === 'development') {
+  const port = +(process.env.PORT ?? 3001);
+  console.log(`Server is running on port ${port}`);
+  
+  serve({
+    fetch: (req: Request) => app.fetch(req),
+    port: port,
+  });
+}

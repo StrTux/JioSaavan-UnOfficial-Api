@@ -1,118 +1,80 @@
-import { MiddlewareHandler } from "hono";
+import type { Context, Next } from "hono";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
-
-import { config } from "./config";
 import { toCamelCase } from "./utils";
 
 /* -----------------------------------------------------------------------------------------------
  * Rate Limit Middleware using Upstash Redis Ratelimit
  * -----------------------------------------------------------------------------------------------*/
 
-export function rateLimitMiddleware(): MiddlewareHandler {
-  return async (c, next) => {
-    // skip middleware if rate limit is disabled
-    if (!config.rateLimit.enable || c.req.path === "/") {
-      return await next();
+// Create a more forgiving rate limiter
+const ratelimit = new Ratelimit({
+  redis: new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL || '',
+    token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+  }),
+  limiter: Ratelimit.slidingWindow(50, '1 m'), // 50 requests per minute
+  analytics: true,
+  prefix: '@upstash/ratelimit',
+});
+
+export const rateLimitMiddleware = () => {
+  return async (c: Context, next: Next) => {
+    if (!process.env.ENABLE_RATE_LIMIT) {
+      return next();
     }
 
-    const ratelimit = new Ratelimit({
-      redis: Redis.fromEnv(),
-      limiter: Ratelimit.slidingWindow(config.rateLimit.limitedReqCount, "1s"),
-    });
+    try {
+      const ip = c.req.header('x-forwarded-for') || 
+                 c.req.header('x-real-ip') || 
+                 c.req.header('cf-connecting-ip') ||
+                 'unknown';
+                 
+      const userAgent = c.req.header('user-agent') || 'unknown';
+      const key = `${ip}:${userAgent}`;
 
-    const ip = c.req.header("x-forwarded-for") ?? "anonymous";
+      // Get remaining requests
+      const { success, limit, remaining, reset } = await ratelimit.limit(key);
 
-    const { limit, remaining, reset, success } = await ratelimit.limit(ip);
+      // Set rate limit headers
+      c.res.headers.set('X-RateLimit-Limit', limit.toString());
+      c.res.headers.set('X-RateLimit-Remaining', remaining.toString());
+      c.res.headers.set('X-RateLimit-Reset', reset.toString());
 
-    if (!success) {
-      c.status(429);
+      if (!success) {
+        return c.json({
+          status: 'Error',
+          message: 'Too Many Requests',
+          data: {
+            limit,
+            remaining,
+            reset: new Date(reset).toISOString()
+          }
+        }, 429);
+      }
 
-      return c.json({
-        status: "Failed",
-        message: "You have exceeded the rate limit. Please try again later.",
-        limit,
-        remaining,
-        reset: `${reset - Date.now()}ms`,
-      });
+      return next();
+    } catch (error) {
+      console.error('Rate limit error:', error);
+      return next();
     }
-
-    c.res.headers.set("x-ratelimit-limit", limit.toString());
-    c.res.headers.set("x-ratelimit-remaining", remaining.toString());
-
-    await next();
   };
-}
-
-/* -----------------------------------------------------------------------------------------------
- * Rate Limit Middleware using LRUCache
- * -----------------------------------------------------------------------------------------------*/
-
-// export function rateLimitMiddleware(): MiddlewareHandler {
-//   return async (c, next) => {
-//     // skip middleware if rate limit is disabled
-//     if (config.rateLimit.enable === false || c.req.path === "/") {
-//       return await next();
-//     }
-
-//     const limit = 5;
-
-//     const xff = c.req.header("x-forwarded-for");
-
-//     const userIp = xff
-//       ? Array.isArray(xff)
-//         ? xff[0]
-//         : xff.split(",")[0]
-//       : "127.0.0.1";
-
-//     const tokenCount = (tokenCache.get(userIp) as number[]) || [0];
-
-//     if (tokenCount[0] === 0) tokenCache.set(userIp, tokenCount);
-
-//     tokenCount[0] += 1;
-
-//     const currentUsage = tokenCount[0];
-//     const isRateLimited = currentUsage > limit;
-
-//     c.res.headers.set(
-//       "x-ratelimit-remaining",
-//       isRateLimited ? "0" : (limit - currentUsage).toString()
-//     );
-
-//     c.res.headers.set("x-ratelimit-limit", limit.toString());
-
-//     if (isRateLimited) {
-//       c.status(429);
-
-//       return c.json({
-//         status: "Failed",
-//         message: "You have exceeded the rate limit. Please try again later.",
-//       });
-//     }
-
-//     await next();
-//   };
-// }
+};
 
 /* -----------------------------------------------------------------------------------------------
  * Camel Case Middleware
  * -----------------------------------------------------------------------------------------------*/
 
-export function camelCaseMiddleware(): MiddlewareHandler {
-  return async (c, next) => {
+export const camelCaseMiddleware = () => {
+  return async (c: Context, next: Next) => {
     const camel = c.req.query("camel");
 
     await next();
 
-    if (
-      (camel || camel === "") &&
-      c.res.headers.get("Content-Type")?.startsWith("application/json")
-    ) {
+    if (camel !== undefined && c.res.headers.get("Content-Type")?.startsWith("application/json")) {
       const obj = await c.res.json();
-
-      const camelCaseResponse = toCamelCase(obj as Record<string, unknown>);
-
-      c.res = new Response(JSON.stringify(camelCaseResponse), c.res);
+      const camelCaseResponse = toCamelCase(obj as Record<string, unknown>) as Record<string, unknown>;
+      return c.json(camelCaseResponse as { [key: string]: unknown });
     }
   };
-}
+};
