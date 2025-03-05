@@ -5,17 +5,11 @@ import { config } from "../lib/config";
 import { isJioSaavnLink, parseBool, tokenFromLink } from "../lib/utils";
 import {
   episodeDetailPayload,
-  episodePayload,
-  showsPayload,
 } from "../payloads/show.payload";
 import { CustomResponse } from "../types/response";
 import {
   EpisodeDetailRequest,
   EpisodeDetailResponse,
-  EpisodeRequest,
-  EpisodeResponse,
-  ShowRequest,
-  ShowRespone,
 } from "../types/show";
 
 const {
@@ -85,39 +79,82 @@ show.get("/episodes", async (c) => {
  * show's details | show's episode details
  * -----------------------------------------------------------------------------------------------*/
 
-show.get("/:episode?", async (c) => {
-  const path = "/" + c.req.path.split("/").slice(2).join("/");
+show.get("/", async (c) => {
+  const { token, link } = c.req.query();
 
-  const {
-    token = "",
-    link = "",
-    season: season_number = "",
-    sort: sort_order = "",
-    raw = "",
-  } = c.req.query();
+  if (!token && !link) {
+    c.status(400);
+    return c.json({
+      status: "Failed",
+      message: "❌ Show token or link is required",
+    });
+  }
 
-  const isHome = path === "/";
+  if (link && !isJioSaavnLink(link)) {
+    c.status(400);
+    return c.json({
+      status: "Failed",
+      message: "❌ Invalid JioSaavn link",
+    });
+  }
 
-  const result: ShowRequest | EpisodeRequest = await api(isHome ? s : e_d, {
-    query: {
-      token: token ? token : tokenFromLink(link),
-      type: isHome ? "show" : "episode",
-      season_number,
-      sort_order,
-    },
-  });
+  try {
+    const result = await api(s, {
+      query: {
+        token: token || tokenFromLink(link),
+      },
+    });
 
-  if (parseBool(raw)) return c.json(result);
+    return c.json({
+      status: "Success",
+      message: "✅ Show details fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    c.status(400);
+    return c.json({
+      status: "Failed",
+      message: error instanceof Error ? error.message : "Failed to get show details",
+    });
+  }
+});
 
-  const payload = isHome
-    ? showsPayload(result as ShowRequest)
-    : episodePayload(result as EpisodeRequest);
+show.get("/episode", async (c) => {
+  const { token, link } = c.req.query();
 
-  const response: CustomResponse<ShowRespone | EpisodeResponse> = {
-    status: "Success",
-    message: `✅ ${isHome ? "Show" : "Episode"} details fetched successfully`,
-    data: payload,
-  };
+  if (!token && !link) {
+    c.status(400);
+    return c.json({
+      status: "Failed",
+      message: "❌ Episode token or link is required",
+    });
+  }
 
-  return c.json(response);
+  if (link && !isJioSaavnLink(link)) {
+    c.status(400);
+    return c.json({
+      status: "Failed",
+      message: "❌ Invalid JioSaavn link",
+    });
+  }
+
+  try {
+    const result = await api(e_d, {
+      query: {
+        token: token || tokenFromLink(link),
+      },
+    });
+
+    return c.json({
+      status: "Success",
+      message: "✅ Episode details fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    c.status(400);
+    return c.json({
+      status: "Failed",
+      message: error instanceof Error ? error.message : "Failed to get episode details",
+    });
+  }
 });

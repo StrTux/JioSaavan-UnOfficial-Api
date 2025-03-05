@@ -1,11 +1,7 @@
 import { serve } from "@hono/node-server";
-import { app } from "./index";
 
-const port = +(process.env.PORT ?? 3000);
+import server from ".";
 
-console.log(`Server is running on port ${port}`);
-
-serve({
-  fetch: app.fetch,
-  port,
+serve(server, (info) => {
+  console.log(`Server listening on ${info.address}:${info.port}`);
 });

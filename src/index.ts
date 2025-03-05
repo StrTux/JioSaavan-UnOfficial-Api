@@ -2,88 +2,99 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
-import { serve } from "@hono/node-server";
+import { timing } from "hono/timing";
 
 import { config } from "./lib/config";
 import { camelCaseMiddleware, rateLimitMiddleware } from "./lib/middleware";
-import { cacheMiddleware } from "./lib/cache";
 import {
   album,
   artist,
-  docs,
-  download,
-  genre,
   get,
   home,
-  language,
   modules,
+  newReleases,
+  ping,
   playlist,
   radio,
   search,
   show,
   song,
-  trending,
 } from "./routes";
+import { docs } from "./routes/docs.route";
+import { trending } from "./routes/trending.route";
+import { mood } from "./routes/mood.route";
+import { podcast } from "./routes/podcast.route";
+import { topArtists } from "./routes/top-artists.route";
+import { CustomResponse } from "./types/response";
 
-const app = new Hono({ strict: false });
+const app = new Hono({ strict: false }); // match routes w/ or w/o trailing slash
 
 /* -----------------------------------------------------------------------------------------------
- * Middlewares
+ * middlewares
  * -----------------------------------------------------------------------------------------------*/
 app.use(
   "*",
-  cors({
-    origin: '*',
-    allowHeaders: ['Content-Type', 'Authorization'],
-    allowMethods: ['GET', 'OPTIONS'],
-    exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
-    maxAge: 600,
-    credentials: true,
-  }),
+  cors(),
   prettyJSON(),
   logger(),
   rateLimitMiddleware(),
-  cacheMiddleware(),
-  camelCaseMiddleware()
+  camelCaseMiddleware(),
+  timing()
 );
 
 /* -----------------------------------------------------------------------------------------------
- * Routes
+ * routes
  * -----------------------------------------------------------------------------------------------*/
+
+app.get("/", (c) => {
+  return c.redirect("/home");
+});
+
 /* home */
-app.route("/", home);
+app.route("/home", home);
+
+/* docs */
+app.route("/docs", docs);
 
 /* modules */
 app.route("/modules", modules);
-
-/* search */
-app.route("/search", search);
 
 /* details & recommendations */
 app.route("/song", song);
 app.route("/album", album);
 app.route("/playlist", playlist);
 app.route("/artist", artist);
+
+/* search */
+app.route("/search", search);
+
+/* show */
 app.route("/show", show);
 
-/* get routes */
+/* get */
 app.route("/get", get);
 
 /* radio */
 app.route("/radio", radio);
 
-/* docs */
-app.route("/docs", docs);
-
-/* new routes */
-app.route("/download", download);
-app.route("/genre", genre);
-app.route("/language", language);
+/* trending */
 app.route("/trending", trending);
 
-/* -----------------------------------------------------------------------------------------------
- * Error Handlers
- * -----------------------------------------------------------------------------------------------*/
+/* mood-based */
+app.route("/mood", mood);
+
+/* podcast */
+app.route("/podcast", podcast);
+
+/* new releases */
+app.route("/new-releases", newReleases);
+
+/* top artists */
+app.route("/top-artists", topArtists);
+
+/* test route to check if the server is up and running */
+app.route("/ping", ping);
+
 /* 404 */
 app.notFound((c) => {
   c.status(404);
@@ -93,32 +104,25 @@ app.notFound((c) => {
   });
 });
 
-/* 500 */
+/* -----------------------------------------------------------------------------------------------
+ * error handler
+ * -----------------------------------------------------------------------------------------------*/
 app.onError((err, c) => {
-  console.error('Server Error:', err);
-  c.status(500);
-  return c.json({
-    status: "Error",
-    message: "Internal Server Error",
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
+  const response: CustomResponse = {
+    status: "Failed",
+    message: `❌ ${err.message}`,
+    data: null,
+  };
+
+  c.status(400);
+  return c.json(response);
 });
 
-// Export the app instance
+const server = {
+  port: +(process.env.PORT ?? 3500),
+  fetch: app.fetch,
+};
+
 export { app };
 
-// Export the handler for Vercel
-export default async function handler(req: Request): Promise<Response> {
-  return app.fetch(req);
-}
-
-// Development server
-if (process.env.NODE_ENV === 'development') {
-  const port = +(process.env.PORT ?? 3001);
-  console.log(`Server is running on port ${port}`);
-  
-  serve({
-    fetch: (req: Request) => app.fetch(req),
-    port: port,
-  });
-}
+export default server;

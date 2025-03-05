@@ -2,7 +2,7 @@ import { Hono } from "hono";
 
 import { api } from "../lib/api";
 import { config } from "../lib/config";
-import { parseBool } from "../lib/utils";
+import { parseBool, validLangs } from "../lib/utils";
 import {
   albumSearchPayload,
   allSearchPayload,
@@ -15,15 +15,18 @@ import {
 import { CustomResponse } from "../types/response";
 import {
   AlbumSearchRequest,
+  AlbumSearchResponse,
   AllSearchRequest,
   ArtistSearchRequest,
+  ArtistSearchResponse,
   CAllSearchResponse,
-  CSearchXResponse,
   CTopSearchResponse,
   PlaylistSearchRequest,
+  PlaylistSearchResponse,
   PodcastSearchRequest,
   PodcastSearchResposne,
   SongSearchRequest,
+  SongSearchResponse,
   TopSearchRequest,
 } from "../types/search";
 
@@ -46,8 +49,14 @@ export const search = new Hono();
 search.get("/", async (c) => {
   const { q: query = "", raw = "" } = c.req.query();
 
+  // Sanitize query to handle special characters
+  const sanitizedQuery = encodeURIComponent(query.trim().replace(/[^\w\s]/g, ' '));
+  if (!sanitizedQuery) {
+    throw new Error("Please provide a valid search query");
+  }
+
   const result: AllSearchRequest = await api(all, {
-    query: { query },
+    query: { query: sanitizedQuery },
     isVersion4: false,
   });
 
@@ -97,7 +106,36 @@ search.get("/top", async (c) => {
 search.get("/:path{(songs|albums|playlists|artists)}", async (c) => {
   const path = c.req.path.split("/")[2];
 
-  const { q = "", page: p = "", n = "", raw = "" } = c.req.query();
+  const { 
+    q = "", 
+    page = "1", 
+    n = "10", 
+    raw = "",
+    language = "",
+    limit = ""
+  } = c.req.query();
+
+  // Validate required query parameter
+  if (!q.trim()) {
+    return c.json({
+      status: "Failed",
+      message: "Please provide a valid search query",
+      data: null
+    }, 400);
+  }
+
+  // Sanitize query to handle special characters
+  const sanitizedQuery = encodeURIComponent(q.trim().replace(/[^\w\s]/g, ' '));
+
+  // Handle language parameter
+  const langs = language ? validLangs(language) : "";
+  if (language && !langs) {
+    return c.json({
+      status: "Failed", 
+      message: "Invalid language parameter",
+      data: null
+    }, 400);
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _artistSearchPayload = (a: ArtistSearchRequest, _?: boolean) =>
@@ -109,7 +147,7 @@ search.get("/:path{(songs|albums|playlists|artists)}", async (c) => {
       albums: [al, albumSearchPayload],
       playlists: [pl, playlistSearchPayload],
       artists: [ar, _artistSearchPayload],
-    } as Record<string, [string, <T, U>(a: T) => Required<U>]>
+    } as Record<string, [string, (a: A) => SongSearchResponse | AlbumSearchResponse | PlaylistSearchResponse | ArtistSearchResponse]>
   )[path];
 
   type A =
@@ -118,23 +156,58 @@ search.get("/:path{(songs|albums|playlists|artists)}", async (c) => {
     | PlaylistSearchRequest
     | ArtistSearchRequest;
 
-  const result: A = await api(endpoint, { query: { q, p, n } });
+  try {
+    const result: A = await api(endpoint, { 
+      query: { 
+        q: sanitizedQuery,
+        p: page,
+        n: n,
+        ...(langs ? { language: langs } : {})
+      } 
+    });
 
-  if (!result.results.length) {
-    throw new Error("No search results found");
+    if (!result.results || !result.results.length) {
+      return c.json({
+        status: "Success",
+        message: "No results found",
+        data: {
+          total: 0,
+          start: 0,
+          results: []
+        }
+      });
+    }
+
+    if (parseBool(raw)) {
+      return c.json(result);
+    }
+
+    let data = payloadFn(result);
+    
+    // Apply limit if specified
+    if (limit && !isNaN(parseInt(limit))) {
+      const limitNum = parseInt(limit);
+      if (Array.isArray(data.results)) {
+        data = {
+          ...data,
+          results: data.results.slice(0, limitNum)
+        } as typeof data;
+      }
+    }
+
+    return c.json({
+      status: "Success",
+      message: "✅ Search results fetched successfully",
+      data
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to fetch search results";
+    return c.json({
+      status: "Failed",
+      message: errorMessage,
+      data: null
+    }, 500);
   }
-
-  if (parseBool(raw)) {
-    return c.json(result);
-  }
-
-  const response: CSearchXResponse = {
-    status: "Success",
-    message: "✅ Search results fetched successfully",
-    data: payloadFn(result),
-  };
-
-  return c.json(response);
 });
 
 /* -----------------------------------------------------------------------------------------------

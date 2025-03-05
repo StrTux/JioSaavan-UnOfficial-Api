@@ -94,7 +94,9 @@ export function isJioSaavnLink(url: string) {
  * @returns `true` | `false`
  */
 export function parseBool(value: string | number) {
-  return typeof value === "number" ? !!value : ["true", "1"].includes(value);
+  if (typeof value === "number") return !!value;
+  if (value === undefined || value === null) return false;
+  return value.toLowerCase() === "true" || value === "1";
 }
 
 /**
@@ -103,8 +105,10 @@ export function parseBool(value: string | number) {
  *
  * @returns Valid `langs` query
  */
-export function validLangs(langs: string) {
-  const validLangs = [
+export function validLangs(lang: string): string {
+  if (!lang) return "";
+  
+  const validLanguages = [
     "hindi",
     "english",
     "punjabi",
@@ -120,15 +124,13 @@ export function validLangs(langs: string) {
     "haryanvi",
     "rajasthani",
     "odia",
-    "assamese",
+    "assamese"
   ];
 
-  const filteredLangs = langs
-    .split(",")
-    .filter((l) => validLangs.includes(l.trim()))
-    .join(",");
-
-  return filteredLangs;
+  const langs = lang.toLowerCase().split(",");
+  const validLangs = langs.filter(l => validLanguages.includes(l.trim()));
+  
+  return validLangs.length > 0 ? validLangs.join(",") : "";
 }
 
 type A = Record<string, unknown>;
@@ -195,3 +197,24 @@ export function dedupArtists(artists: Artist) {
 
   return Object.values(uniqueArtists);
 }
+
+export const extractSongId = (url: string): string | null => {
+  try {
+    // Remove any trailing slashes and query parameters
+    const cleanUrl = url.split('?')[0].replace(/\/$/, '');
+    
+    // Extract the last part of the URL which should be the ID
+    const parts = cleanUrl.split('/');
+    const lastPart = parts[parts.length - 1];
+    
+    // JioSaavn song IDs are typically in this format
+    if (lastPart && lastPart.length > 0) {
+      return lastPart;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting song ID:', error);
+    return null;
+  }
+};

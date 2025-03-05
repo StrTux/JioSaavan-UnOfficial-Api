@@ -262,32 +262,21 @@ get.get("/footer-details", async (c) => {
  * -----------------------------------------------------------------------------------------------*/
 
 get.get("/lyrics", async (c) => {
-  const { id: lyrics_id = "", raw = "" } = c.req.query();
+  const { id = "", raw = "" } = c.req.query();
 
-  if (!lyrics_id) throw new Error("Songs/Lyrics ID is required");
+  if (!id) throw new Error("Song ID param is required");
 
-  // First verify if song exists
-  const song: SongRequest = await api(config.endpoint.song.id, {
-    query: { pids: lyrics_id },
-  });
-
-  if (!song || !song.more_info?.has_lyrics) {
-    throw new Error("Song not found or lyrics not available");
-  }
-
-  const result: Lyrics = await api(l, { query: { lyrics_id } });
+  const result: Lyrics = await api(l, { query: { lyrics_id: id } });
 
   if (!result || !result.lyrics) {
-    throw new Error("Lyrics not available for this song");
+    throw new Error("Failed to fetch lyrics, please check the song ID");
   }
 
-  if (parseBool(raw)) {
-    return c.json(result);
-  }
+  if (parseBool(raw)) return c.json(result);
 
   const response: CGetLyricsResponse = {
     status: "Success",
-    message: `✅ Lyrics fetched successfully`,
+    message: "✅ Lyrics fetched successfully",
     data: result,
   };
 

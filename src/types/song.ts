@@ -1,6 +1,7 @@
-import { ArtistMapRequest, ArtistMapResponse } from "./artist";
-import { MiniResponse, Quality, Rights } from "./misc";
+import { ArtistMapRequest } from "./artist";
+import { MiniResponse, Type, Quality, Rights } from "./misc";
 import { CustomResponse } from "./response";
+import { ArtistMapResponse } from "./artist";
 
 /* -----------------------------------------------------------------------------------------------
  * Request
@@ -117,45 +118,84 @@ export type SongObjResponse = {
   modules?: SongModulesResponse;
 };
 
-export type SongResponse = {
+export interface SongDetails {
+  id: string;
+  name: string;
+  album?: {
+    id: string;
+    name: string;
+    url: string;
+  };
+  year?: string;
+  releaseDate?: string;
+  duration?: string;
+  language?: string;
+  downloadUrl?: string[];
+  streamingUrl?: string;
+  image?: string[];
+  primaryArtists?: string;
+  singers?: string[];
+  artists?: Array<{
+    id?: string;
+    name: string;
+    url?: string;
+  }>;
+  lyrics?: string;
+  hasLyrics?: boolean;
+  copyright?: string;
+  label?: string;
+}
+
+export interface SongResponse {
   id: string;
   name: string;
   subtitle: string;
-  header_desc: string;
-  type: "song";
+  type: Type;
   url: string;
   image: Quality;
-  language: string;
-  year: number;
-  play_count: number;
-  explicit: boolean;
-  list: string;
-  list_type: string;
-  list_count: number;
-  music: string;
+  language?: string;
+  year?: string | number;
+  header_desc?: string;
+  play_count?: string | number;
+  explicit?: boolean;
+  list?: string;
+  list_type?: string;
+  list_count?: number;
+  music?: string;
+  artist_map?: ArtistMapResponse;
   song?: string;
-  album: string;
-  album_id: string;
-  album_url: string;
-  label: string;
-  label_url: string;
-  origin: string;
-  is_dolby_content: boolean;
-  "320kbps": boolean;
-  download_url: Quality;
-  duration: number;
-  rights: Rights;
-  has_lyrics: boolean;
+  album?: {
+    id: string;
+    name: string;
+    url: string;
+  };
+  album_id?: string;
+  album_url?: string;
+  label?: string;
+  label_url?: string;
+  origin?: string;
+  is_dolby_content?: boolean;
+  "320kbps"?: boolean;
+  download_url?: Quality;
+  duration?: number;
+  rights?: Rights;
+  has_lyrics?: boolean;
   lyrics_id?: string;
-  lyrics_snippet: string;
-  starred: boolean;
-  copyright_text: string;
-  artist_map: ArtistMapResponse;
+  lyrics_snippet?: string;
+  starred?: boolean;
   release_date?: string;
-  vcode: string;
-  vlink: string;
-  triller_available: boolean;
-};
+  triller_available?: boolean;
+  copyright_text?: string;
+  vcode?: string;
+  vlink?: string;
+  primary_artists?: string;
+  singers?: string[];
+  artists?: Array<{
+    id?: string;
+    name: string;
+    url?: string;
+  }>;
+}
 
 export type SongModulesResponse = {
   recommend: {

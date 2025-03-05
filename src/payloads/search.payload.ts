@@ -315,7 +315,22 @@ export function songSearchPayload(
 ): SongSearchResponse {
   const { total, start, results } = s;
 
-  return { total, start, results: results.map((s) => songPayload(s, mini)) };
+  return {
+    total,
+    start,
+    results: results.map((s) => ({
+      ...songPayload(s, mini),
+      type: "song",
+      language: s.language || "hindi",
+      year: s.year || new Date().getFullYear(),
+      header_desc: s.header_desc || "",
+      play_count: s.play_count || 0,
+      explicit: parseBool(s.explicit_content || "false"),
+      list: s.list || "",
+      list_type: s.list_type || "",
+      list_count: s.list_count || 0
+    }))
+  };
 }
 
 export function albumSearchPayload(
@@ -352,33 +367,20 @@ export function artistSearchPayload(
   return {
     total,
     start,
-    results: results.map((a) => {
-      const {
-        id,
-        name,
-        ctr,
-        entity,
-        image,
-        role,
-        perma_url: url,
-        type,
-        isRadioPresent: is_radio_present,
-        is_followed,
-      } = a;
-
-      return {
-        id,
-        name: decode(name),
-        type,
-        role,
-        url,
-        image: createImageLinks(image),
-        ctr,
-        entity,
-        is_followed,
-        is_radio_present,
-      };
-    }),
+    results: results.map((a) => ({
+      id: a.id,
+      name: decode(a.name),
+      type: a.type,
+      role: a.role,
+      url: a.perma_url,
+      image: createImageLinks(a.image),
+      ctr: a.ctr,
+      entity: a.entity,
+      is_followed: a.is_followed,
+      is_radio_present: a.isRadioPresent,
+      subtitle: `${a.role || "Artist"} • ${a.ctr || 0} Followers`,
+      follower_count: a.ctr || 0
+    }))
   };
 }
 

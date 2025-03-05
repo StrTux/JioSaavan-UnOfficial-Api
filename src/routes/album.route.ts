@@ -20,11 +20,11 @@ export const album = new Hono();
  * -----------------------------------------------------------------------------------------------*/
 
 album.use("*", async (c, next) => {
-  const { id, link, token, year } = c.req.query();
+  const { albumid, link, token, year } = c.req.query();
   const path = "/" + c.req.path.split("/").slice(2).join("/");
 
   if (path === "/") {
-    if (!id && !link && !token)
+    if (!albumid && !link && !token)
       throw new Error("Please provide album id, link or a token");
 
     if (link && !(isJioSaavnLink(link) && link.includes("album"))) {
@@ -33,7 +33,7 @@ album.use("*", async (c, next) => {
   }
 
   if (path === "/recommend") {
-    if (!id) throw new Error("Please provide album id");
+    if (!albumid) throw new Error("Please provide album id");
   }
 
   if (path === "/same-year") {
@@ -49,7 +49,7 @@ album.use("*", async (c, next) => {
 
 album.get("/", async (c) => {
   const {
-    id: albumid = "",
+    albumid = "",
     link = "",
     token = "",
     raw = "",
@@ -86,7 +86,7 @@ album.get("/", async (c) => {
  * -----------------------------------------------------------------------------------------------*/
 
 album.get("/recommend", async (c) => {
-  const { id: albumid, lang = "", raw = "", mini = "" } = c.req.query();
+  const { albumid, lang = "", raw = "", mini = "" } = c.req.query();
 
   const result = await api<AlbumRequest[]>(r, {
     query: { albumid, language: validLangs(lang) },

@@ -90,25 +90,21 @@ playlist.get("/", async (c) => {
 playlist.get("/recommend", async (c) => {
   const { id: listid, lang = "", raw = "", mini = "" } = c.req.query();
 
-  if (!listid) {
-    throw new Error("Please provide playlist id");
-  }
-
-  // First verify if playlist exists
-  const playlist: PlaylistRequest = await api(i, {
-    query: { listid },
-  });
-
-  if (!playlist || !playlist.id) {
-    throw new Error("Playlist not found");
-  }
-
   const result = await api<PlaylistRequest[]>(r, {
-    query: { listid, language: validLangs(lang) },
+    query: { 
+      listid,
+      language: validLangs(lang),
+      __call: "playlist.getRecommendedPlaylists"
+    },
   });
 
-  if (!result || !Array.isArray(result) || !result.length) {
-    throw new Error("No recommendations found for this playlist");
+  if (!result || !Array.isArray(result) || result.length === 0) {
+    const response: CPlaylistsResponse = {
+      status: "Success",
+      message: "✅ No playlist recommendations found",
+      data: []
+    };
+    return c.json(response);
   }
 
   if (parseBool(raw)) {

@@ -36,14 +36,14 @@ export const artist = new Hono();
  * -----------------------------------------------------------------------------------------------*/
 
 artist.use("*", async (c, next) => {
-  const { id, link, token, artist_id, song_id } = c.req.query();
+  const { artistid, link, token } = c.req.query();
   const path = "/" + c.req.path.split("/").slice(2).join("/");
 
   if (path === "/") {
-    if (!id && !link && !token)
+    if (!artistid && !link && !token)
       throw new Error("Please provide Artist id, link or token");
 
-    if (id && link) throw new Error("Please provide either Artist id or link");
+    if (artistid && link) throw new Error("Please provide either Artist id or link");
 
     if (link && !isJioSaavnLink(link) && link.includes("artist")) {
       throw new Error("Please provide a valid JioSaavn link");
@@ -51,12 +51,7 @@ artist.use("*", async (c, next) => {
   }
 
   if (path === "/songs" || path === "/albums") {
-    if (!id) throw new Error("Please provide artist id.");
-  }
-
-  if (["/top-songs", "/recommend"].includes(path)) {
-    if (!artist_id) throw new Error("Please provide artist id.");
-    if (!song_id) throw new Error("Please provide song id.");
+    if (!artistid) throw new Error("Please provide artist id.");
   }
 
   await next();
@@ -68,24 +63,18 @@ artist.use("*", async (c, next) => {
 
 artist.get("/", async (c) => {
   const {
-    id = "",
+    artistid = "",
     link = "",
     token = "",
-    page: p = "",
-    n_song = "10",
-    n_album = "10",
     raw = "",
     mini = "",
   } = c.req.query();
 
-  const result: ArtistRequest = await api(id ? i : l, {
+  const result: ArtistRequest = await api(artistid ? i : l, {
     query: {
-      artistId: id,
+      artistid,
       token: token ? token : tokenFromLink(link),
-      type: id ? "" : "artist",
-      p,
-      n_song,
-      n_album,
+      type: artistid ? "" : "artist",
     },
   });
 
@@ -112,17 +101,15 @@ artist.get("/", async (c) => {
 artist.get("/:path{(songs|albums)}", async (c) => {
   const path = c.req.path.split("/")[2];
   const {
-    id,
+    artistid,
     page = "",
-    cat: category = "", // ["latest", "alphabetical"]
-    sort: sort_order = "", // ["asc", "desc"]
     raw = "",
     mini = "",
   } = c.req.query();
 
   const result: ArtistSongsOrAlbumsRequest = await api(
     path === "songs" ? s : a,
-    { query: { artistId: id, page, category, sort_order, n_song: "50" } }
+    { query: { artistid, page } }
   );
 
   if (

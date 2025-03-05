@@ -106,7 +106,7 @@ docker-compose up --build
 
 # Or using Docker directly
 docker build -t jiosaavan-api .
-docker run -p 3000:3000 jiosaavan-api
+docker run -p 3500:3500 jiosaavan-api
 ```
 
 ## License

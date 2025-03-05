@@ -204,20 +204,13 @@ describe("Get Route", () => {
 
   test("Get /get/lyrics?id=IhKbmgyP | Song's Lyrics", async () => {
     const response = await app.request("/get/lyrics?id=IhKbmgyP");
-    interface LyricsResponse {
-      status: string;
-      message?: string;
-      data: unknown;
-    }
-    const data = (await response.json()) as LyricsResponse;
 
-    // The API returns 400 when lyrics are not available
-    expect([200, 400]).toContain(response.status);
-    if (response.status === 400) {
-      expect(data.status).toBe("Failed");
-      expect(data.message).toBe("Song not found or lyrics not available");
-    } else {
-      expect(data.status).toBe("Success");
-    }
+    expect(response.status).toBe(200);
+
+    const lyrics: any = await response.json();
+
+    expect(lyrics.status).toBe("Success");
+    expect(lyrics.data).toHaveProperty("lyrics");
+    expect(lyrics.data).toHaveProperty("snippet");
   });
 });

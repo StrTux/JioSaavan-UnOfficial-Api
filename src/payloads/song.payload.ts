@@ -9,6 +9,7 @@ import {
   SongObjResponse,
   SongRequest,
   SongResponse,
+  SongDetails
 } from "../types/song";
 import { artistMapPayload } from "./artist.payload";
 import { miniPayload } from "./misc.payload";

@@ -5,18 +5,44 @@ import { config } from "../lib/config";
 import {
   isJioSaavnLink,
   parseBool,
-  tokenFromLink,
   validLangs,
 } from "../lib/utils";
-import { songObjPayload, songPayload } from "../payloads/song.payload";
+import { songPayload } from "../payloads/song.payload";
 import {
-  CSongResponse,
   CSongsResponse,
-  SongObjRequest,
   SongRequest,
+  SongDetails,
+  CSongResponse,
 } from "../types/song";
 
 const { id: i, link: l, recommend: r } = config.endpoint.song;
+
+interface JioSaavnSongResponse {
+  songs: Array<{
+    id: string;
+    title: string;
+    album: string;
+    albumid: string;
+    year: string;
+    release_date: string;
+    duration: string;
+    language: string;
+    media_preview_url: string;
+    image: string;
+    primary_artists: string;
+    singers?: string;
+    artistMap?: {
+      artists?: Array<{
+        id: string;
+        name: string;
+        perma_url: string;
+      }>;
+    };
+    has_lyrics: string;
+    copyright_text: string;
+    label: string;
+  }>;
+}
 
 export const song = new Hono();
 
@@ -38,7 +64,7 @@ song.use("*", async (c, next) => {
     }
   }
 
-  if (path === "/recommend") {
+  if (path === "recommend") {
     if (!id) throw new Error("Please provide song id");
   }
 
@@ -55,29 +81,87 @@ song.get("/", async (c) => {
     link = "",
     token = "",
     raw = "",
-
     mini = "",
   } = c.req.query();
 
-  const result: SongObjRequest = await api(pids ? i : l, {
-    query: { pids, token: token ? token : tokenFromLink(link), type: "song" },
-  });
+  try {
+    let songId = pids;
+    
+    // If link is provided, extract song ID from the link
+    if (link) {
+      const urlParts = link.split("/");
+      songId = urlParts[urlParts.length - 1];
+    }
 
-  if (!("songs" in result)) {
-    throw new Error("Song not found, please check the id, link or token");
+    // If neither ID nor valid link, try token
+    if (!songId && token) {
+      songId = token;
+    }
+
+    if (!songId) {
+      throw new Error("Invalid song ID or link");
+    }
+
+    // Use webapi.get endpoint for all requests
+    const result = await api<JioSaavnSongResponse>(l, {
+      query: { token: songId, type: "song" },
+      isVersion4: false,
+    });
+
+    if (!result || !result.songs || !result.songs.length) {
+      throw new Error("Song not found, please check the id, link or token");
+    }
+
+    if (parseBool(raw)) {
+      return c.json(result);
+    }
+
+    const songDetails = {
+      id: result.songs[0].id,
+      name: result.songs[0].title,
+      subtitle: result.songs[0].primary_artists,
+      type: "song" as const,
+      url: `https://www.jiosaavn.com/song/${result.songs[0].id}`,
+      image: result.songs[0].image,
+      album: {
+        id: result.songs[0].albumid,
+        name: result.songs[0].album,
+        url: `https://www.jiosaavn.com/album/${result.songs[0].albumid}`
+      },
+      year: result.songs[0].year,
+      releaseDate: result.songs[0].release_date,
+      duration: result.songs[0].duration,
+      language: result.songs[0].language,
+      downloadUrl: [result.songs[0].media_preview_url],
+      primaryArtists: result.songs[0].primary_artists,
+      singers: result.songs[0].singers?.split(","),
+      artists: result.songs[0].artistMap?.artists?.map(artist => ({
+        id: artist.id,
+        name: artist.name,
+        url: artist.perma_url
+      })),
+      hasLyrics: result.songs[0].has_lyrics === "true",
+      copyright: result.songs[0].copyright_text,
+      label: result.songs[0].label
+    };
+
+    const response: CSongResponse = {
+      status: "Success",
+      message: "✅ Song details fetched successfully",
+      data: {
+        songs: [songDetails]
+      }
+    };
+
+    return c.json(response);
+  } catch (error) {
+    console.error("Error fetching song details:", error);
+    return c.json({
+      status: "Error",
+      message: "Failed to fetch song details",
+      error: error instanceof Error ? error.message : "Unknown error occurred"
+    }, 500);
   }
-
-  if (parseBool(raw)) {
-    return c.json(result);
-  }
-
-  const response: CSongResponse = {
-    status: "Success",
-    message: "✅ Song(s) Details fetched successfully",
-    data: songObjPayload(result, parseBool(mini)),
-  };
-
-  return c.json(response);
 });
 
 /* -----------------------------------------------------------------------------------------------
@@ -85,25 +169,108 @@ song.get("/", async (c) => {
  * -----------------------------------------------------------------------------------------------*/
 
 song.get("/recommend", async (c) => {
-  const { id: pid, lang = "", raw = "", mini = "" } = c.req.query();
+  const { id: pid, lang = "", raw = "", mini = "", limit = "" } = c.req.query();
 
-  const result: SongRequest[] = await api(r, {
-    query: { pid, language: validLangs(lang) },
-  });
+  try {
+    const result: SongRequest[] = await api(r, {
+      query: { pid, language: validLangs(lang) },
+    });
 
-  if (!result) {
-    throw new Error("No recommendations found, please check the id");
+    if (!result || !Array.isArray(result)) {
+      throw new Error("No recommendations found, please check the id");
+    }
+
+    if (parseBool(raw)) {
+      return c.json(result);
+    }
+
+    let songs = result.map((s) => songPayload(s, parseBool(mini)));
+    if (limit && !isNaN(parseInt(limit))) {
+      songs = songs.slice(0, parseInt(limit));
+    }
+
+    const response: CSongsResponse = {
+      status: "Success",
+      message: "✅ Song Recommendations fetched successfully",
+      data: songs,
+    };
+
+    return c.json(response);
+  } catch (error) {
+    c.status(400);
+    return c.json({
+      status: "Failed",
+      message: error instanceof Error ? error.message : "Failed to get recommendations",
+    });
   }
-
-  if (parseBool(raw)) {
-    return c.json(result);
-  }
-
-  const response: CSongsResponse = {
-    status: "Success",
-    message: "✅ Song Recommendations fetched successfully",
-    data: result.map((s) => songPayload(s, parseBool(mini))),
-  };
-
-  return c.json(response);
 });
+
+/* -----------------------------------------------------------------------------------------------
+ * Song Details by ID Route Handler - GET /song/:id
+ * -----------------------------------------------------------------------------------------------*/
+
+song.get("/:id", async (c) => {
+  try {
+    const songId = c.req.param("id");
+    
+    // Use webapi.get endpoint for all requests
+    const result = await api<JioSaavnSongResponse>(l, {
+      query: { token: songId, type: "song" },
+      isVersion4: false,
+    });
+
+    if (!result || !result.songs || !result.songs.length) {
+      throw new Error("Song not found");
+    }
+
+    const songDetails: SongDetails = {
+      id: songId,
+      name: result.songs[0].title,
+      album: {
+        id: result.songs[0].albumid,
+        name: result.songs[0].album,
+        url: `https://www.jiosaavn.com/album/${result.songs[0].album}/${result.songs[0].albumid}`
+      },
+      year: result.songs[0].year,
+      releaseDate: result.songs[0].release_date,
+      duration: result.songs[0].duration,
+      language: result.songs[0].language,
+      downloadUrl: [result.songs[0].media_preview_url],
+      streamingUrl: result.songs[0].media_preview_url,
+      image: [
+        result.songs[0].image,
+        result.songs[0].image.replace("150x150", "500x500")
+      ],
+      primaryArtists: result.songs[0].primary_artists,
+      singers: result.songs[0].singers?.split(", "),
+      artists: result.songs[0].artistMap?.artists?.map(artist => ({
+        id: artist.id,
+        name: artist.name,
+        url: artist.perma_url
+      })) || [],
+      hasLyrics: result.songs[0].has_lyrics === "true",
+      copyright: result.songs[0].copyright_text,
+      label: result.songs[0].label
+    };
+
+    const response: CSongResponse = {
+      status: "Success",
+      message: "✅ Song details fetched successfully",
+      data: {
+        songs: [songDetails]
+      }
+    };
+
+    return c.json(response);
+  } catch (error: unknown) {
+    console.error("Error fetching song details:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    return c.json({
+      status: "Error",
+      message: "Failed to fetch song details",
+      error: errorMessage
+    }, 500);
+  }
+});
+
+export { song as songRoute };

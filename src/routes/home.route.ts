@@ -2,8 +2,10 @@ import { Hono } from "hono";
 
 import { config } from "../lib/config";
 
-export const home = new Hono().get("/", (c) =>
-  c.html(`<!DOCTYPE html>
+export const home = new Hono();
+
+home.get("/", (c) => {
+	const html = `<!DOCTYPE html>
 <html>
 	<head>
 		<meta charset="utf-8" />
@@ -132,9 +134,7 @@ export const home = new Hono().get("/", (c) =>
 				class="cards grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto"
 			>
 				<a
-					href="${config.urls.docsUrl}"
-					target="_blank"
-					rel="noopener noreferrer"
+					href="/docs"
 					class="card relative flex flex-col rounded-2xl border-2 border-black/20 bg-white p-6 transition-all duration-300"
 				>
 					<div class="flex flex-col h-full">
@@ -244,5 +244,9 @@ export const home = new Hono().get("/", (c) =>
 			};
 		</script>
 	</body>
-</html>`)
-);
+</html>`;
+
+	// Set cache control headers
+	c.header('Cache-Control', 'public, max-age=3600');
+	return c.html(html);
+});

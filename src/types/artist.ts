@@ -215,26 +215,24 @@ export type ArtistMiniResponse = {
   role: string;
 };
 
-export type ArtistSongResponse = Pick<
-  SongResponse,
-  | "id"
-  | "name"
-  | "subtitle"
-  | "type"
-  | "url"
-  | "image"
-  | "language"
-  | "year"
-  | "play_count"
-  | "explicit"
-  | "list_count"
-  | "list_type"
-  | "music"
-  | "artist_map"
-> & {
-  query: string;
-  text: string;
-  song_count: number;
+export type ArtistSongResponse = {
+  id: string;
+  name: string;
+  subtitle: string;
+  type: string;
+  url: string;
+  image: Quality;
+  language?: string;
+  year?: number;
+  play_count?: number;
+  explicit?: boolean;
+  list_count?: number;
+  list_type?: string;
+  music?: string;
+  artist_map?: ArtistMapResponse;
+  query?: string;
+  song_count?: number;
+  text?: string;
 };
 
 export type ArtistSongsOrAlbumsResponse = {

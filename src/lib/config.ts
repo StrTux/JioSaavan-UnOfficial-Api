@@ -1,14 +1,8 @@
-const getBaseUrl = () => {
-  if (process.env.BASE_URL) return process.env.BASE_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
-};
-
 export const config = {
   urls: {
     baseUrl: "https://www.jiosaavn.com/api.php",
-    docsUrl: "/docs",
-    siteUrl: getBaseUrl(),
+    docsUrl: "https://strtux-main.vercel.app/docs",
+    siteUrl: process.env.BASE_URL || "http://localhost:3500",
   },
 
   rateLimit: {
@@ -25,28 +19,28 @@ export const config = {
     song: {
       id: "song.getDetails",
       link: "webapi.get",
-      recommend: "reco.getreco",
+      recommend: "reco.getRecommendedSongs",
     },
 
     album: {
-      id: "content.getAlbumDetails",
+      id: "album.getDetails",
       link: "webapi.get",
-      recommend: "reco.getAlbumReco",
+      recommend: "reco.getRecommendedAlbums",
       same_year: "search.topAlbumsoftheYear",
     },
 
     playlist: {
       id: "playlist.getDetails",
       link: "webapi.get",
-      recommend: "reco.getPlaylistReco",
+      recommend: "reco.getRecommendedPlaylists",
     },
 
     artist: {
-      id: "artist.getArtistPageDetails",
+      id: "content.getArtistDetails",
       link: "webapi.get",
-      songs: "artist.getArtistMoreSong",
-      albums: "artist.getArtistMoreAlbum",
-      top_songs: "search.artistOtherTopSongs",
+      songs: "content.getArtistTopSongs",
+      albums: "content.getArtistAlbums",
+      top_songs: "content.getArtistTopSongs"
     },
 
     search: {
@@ -56,20 +50,20 @@ export const config = {
       albums: "search.getAlbumResults",
       artists: "search.getArtistResults",
       playlists: "search.getPlaylistResults",
-      more: "search.getMoreResults",
+      more: "content.getMoreResults",
     },
 
     radio: {
       featured: "webradio.createFeaturedStation",
       artist: "webradio.createArtistStation",
       entity: "webradio.createEntityStation",
-      songs: "webradio.getSong",
+      songs: "webradio.getSongs",
     },
 
     show: {
-      show_details: "webapi.get",
-      episodes: "show.getAllEpisodes",
-      episode_details: "webapi.get",
+      show_details: "show.getDetails",
+      episodes: "show.getEpisodes",
+      episode_details: "episode.getDetails",
     },
 
     get: {
@@ -77,15 +71,15 @@ export const config = {
       featured_playlists: "content.getFeaturedPlaylists",
       charts: "content.getCharts",
       top_shows: "content.getTopShows",
-      top_artists: "social.getTopArtists",
-      top_albums: "content.getAlbums",
-      mix_details: "webapi.get",
-      label_details: "webapi.get",
+      top_artists: "content.getTopArtists",
+      top_albums: "content.getTopAlbums",
+      mix_details: "playlist.getDetails",
+      label_details: "label.getDetails",
       featured_stations: "webradio.getFeaturedStations",
-      actor_top_songs: "search.actorOtherTopSongs",
+      actor_top_songs: "search.artistOtherTopSongs",
       lyrics: "lyrics.getLyrics",
-      footer_details: "webapi.getFooterDetails",
-      mega_menu: "webapi.getBrowseHoverDetails",
+      footer_details: "content.getFooterDetails",
+      mega_menu: "content.getMegaMenu",
     },
   },
 };

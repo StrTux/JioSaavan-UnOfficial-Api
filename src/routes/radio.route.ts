@@ -17,12 +17,11 @@ const { featured: f, artist: a, entity: e, songs: s } = config.endpoint.radio;
 export const radio = new Hono();
 
 /* -----------------------------------------------------------------------------------------------
- * Create Radio Route Handler - /radio/:create/{featured|artist|entity}
- *                                      ^^^^^^ <--- Optional
+ * Create Radio Route Handler - /radio/{featured|artist|entity}
  * -----------------------------------------------------------------------------------------------*/
 
-radio.get("/:path{(create/)?(featured|artist|entity)}", async (c) => {
-  const path = c.req.path.split("/").at(-1) as "featured" | "artist" | "entity";
+radio.get("/:type{(featured|artist|entity)}", async (c) => {
+  const type = c.req.param("type");
 
   const {
     song_id: pid = "",
@@ -36,44 +35,60 @@ radio.get("/:path{(create/)?(featured|artist|entity)}", async (c) => {
     raw = "",
   } = c.req.query();
 
-  if (path === "entity") {
-    if (!entity_id) throw new Error("Radio Station ID is Required!");
-    if (!entity_type) throw new Error("Radio Station Type is Required!");
-  } else {
-    if (!name) throw new Error("Radio Station Name is Required!");
-  }
-
-  const endpoint = path === "featured" ? f : path === "artist" ? a : e;
-
-  const { error, stationid: station_id }: RadioStationRequest = await api(
-    endpoint,
-    {
-      query: {
-        pid,
-        artistid,
-        entity_id,
-        entity_type,
-        name,
-        query: !query ? name : query,
-        mode,
-        language: validLangs(lang),
-      },
+  try {
+    if (type === "entity") {
+      if (!entity_id) {
+        throw new Error("Radio Station ID is Required!");
+      }
+      if (!entity_type) {
+        throw new Error("Radio Station Type is Required!");
+      }
+    } else if (!name) {
+      throw new Error("Radio Station Name is Required!");
     }
-  );
 
-  if (error) throw new Error(typeof error === "string" ? error : error.msg);
+    const endpoint = type === "featured" ? f : type === "artist" ? a : e;
 
-  if (parseBool(raw)) return c.json(station_id);
+    const { error, stationid: station_id }: RadioStationRequest = await api(
+      endpoint,
+      {
+        query: {
+          pid,
+          artistid,
+          entity_id,
+          entity_type,
+          name,
+          query: !query ? name : query,
+          mode,
+          language: validLangs(lang),
+        },
+      }
+    );
 
-  const payload: CustomResponse<RadioStationResponse> = {
-    status: "Success",
-    message: `✅ ${
-      path[0].toUpperCase() + path.substring(1)
-    } Radio Station Created Successfully!`,
-    data: { station_id },
-  };
+    if (error) {
+      throw new Error(typeof error === "string" ? error : error.msg);
+    }
 
-  return c.json(payload);
+    if (parseBool(raw)) {
+      return c.json(station_id);
+    }
+
+    const payload: CustomResponse<RadioStationResponse> = {
+      status: "Success",
+      message: `✅ ${
+        type[0].toUpperCase() + type.substring(1)
+      } Radio Station Created Successfully!`,
+      data: { station_id },
+    };
+
+    return c.json(payload);
+  } catch (error) {
+    c.status(400);
+    return c.json({
+      status: "Failed",
+      message: error instanceof Error ? error.message : "Failed to create radio station",
+    });
+  }
 });
 
 /* -----------------------------------------------------------------------------------------------
@@ -88,38 +103,35 @@ radio.get("/songs", async (c) => {
     mini = "",
   } = c.req.query();
 
-  if (!stationid) throw new Error("Radio Station ID is Required!");
-
-  // First verify if station exists
-  const stationResult: RadioStationRequest = await api(
-    config.endpoint.radio.entity,
-    {
-      query: {
-        entity_id: stationid,
-        entity_type: "radio",
-      },
+  try {
+    if (!stationid) {
+      throw new Error("Radio Station ID is Required!");
     }
-  );
 
-  if (!stationResult || stationResult.error) {
-    throw new Error("Radio station not found");
+    const result: RadioSongRequest = await api(s, {
+      query: { stationid, k },
+    });
+
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    if (parseBool(raw)) {
+      return c.json(result);
+    }
+
+    const payload: CustomResponse<RadioSongResponse> = {
+      status: "Success",
+      message: "✅ Radio Station Songs Fetched Successfully!",
+      data: radioSongsPayload(result, parseBool(mini)),
+    };
+
+    return c.json(payload);
+  } catch (error) {
+    c.status(400);
+    return c.json({
+      status: "Failed",
+      message: error instanceof Error ? error.message : "Failed to get radio station songs",
+    });
   }
-
-  const result: RadioSongRequest = await api(s, {
-    query: { stationid, k },
-  });
-
-  if (!result || result.error) {
-    throw new Error(result?.error || "Failed to fetch radio station songs");
-  }
-
-  if (parseBool(raw)) return c.json(result);
-
-  const payload: CustomResponse<RadioSongResponse> = {
-    status: "Success",
-    message: "✅ Radio Station Songs Fetched Successfully!",
-    data: radioSongsPayload(result, parseBool(mini)),
-  };
-
-  return c.json(payload);
 });

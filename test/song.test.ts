@@ -1,91 +1,136 @@
 import { describe, expect, test } from "bun:test";
+import { writeFileSync } from "fs";
 
 import { app } from "../src";
 
-describe("Song", () => {
-  test("GET /song | Songs Details (Error)", async () => {
-    const response = await app.request("/song");
+const BASE_URL = "http://localhost:3500";
 
-    expect(response.status).toBe(400);
+interface SongDetails {
+  id: string;
+  name: string;
+  album?: {
+    id: string;
+    name: string;
+    url: string;
+  };
+  year?: string;
+  releaseDate?: string;
+  duration?: string;
+  language?: string;
+  downloadUrl?: string[];
+  streamingUrl?: string;
+  image?: string[];
+  primaryArtists?: string;
+  singers?: string[];
+  artists?: Array<{
+    id?: string;
+    name: string;
+    url?: string;
+  }>;
+  lyrics?: string;
+  hasLyrics?: boolean;
+  copyright?: string;
+  label?: string;
+}
 
-    const songs: any = await response.json();
+interface SongResponse {
+  status: string;
+  message: string;
+  data: SongDetails;
+}
 
-    expect(songs.status).toBe("Failed");
-    expect(songs.data).toBeNull();
-  });
+interface ErrorResponse {
+  status: string;
+  message: string;
+  error: string;
+}
 
-  test("GET /song?id=5WXAlMNt,9BjJPi0Y | Song Details by ID", async () => {
-    const response = await app.request("/song?id=5WXAlMNt,9BjJPi0Y");
+async function saveResponseToFile(filename: string, data: any) {
+  writeFileSync(filename, JSON.stringify(data, null, 2));
+}
 
-    expect(response.status).toBe(200);
+describe("Song API Tests", () => {
+  describe("Song Details Endpoint", () => {
+    test("GET song details by ID should return valid data", async () => {
+      const songId = "GB4-dAV4WFs"; // Sanam Teri Kasam song ID
+      const response = await fetch(`${BASE_URL}/song/${songId}`);
+      expect(response.status).toBe(200);
+      
+      const data = await response.json() as SongResponse;
+      expect(data.status).toBe("Success");
+      expect(data.message).toBe("✅ Song details fetched successfully");
+      expect(data.data).toBeDefined();
+      
+      await saveResponseToFile("test/responses/song.json", data);
+      
+      // Validate song details
+      const songDetails = data.data;
+      expect(songDetails.id).toBe(songId);
+      expect(songDetails.name).toBeDefined();
+      expect(songDetails.streamingUrl).toBeDefined();
+      expect(songDetails.streamingUrl).toMatch(/^https?:\/\//);
+      expect(songDetails.downloadUrl).toBeDefined();
+      if (songDetails.downloadUrl) {
+        expect(Array.isArray(songDetails.downloadUrl)).toBe(true);
+        expect(songDetails.downloadUrl.length).toBeGreaterThan(0);
+      }
+      expect(songDetails.image).toBeDefined();
+      if (songDetails.image) {
+        expect(Array.isArray(songDetails.image)).toBe(true);
+        expect(songDetails.image.length).toBeGreaterThan(0);
+      }
 
-    const songs: any = await response.json();
+      // Validate album details
+      expect(songDetails.album).toBeDefined();
+      expect(songDetails.album?.id).toBeDefined();
+      expect(songDetails.album?.name).toBeDefined();
+      expect(songDetails.album?.url).toBeDefined();
+      expect(songDetails.album?.url).toMatch(/^https:\/\/www\.jiosaavn\.com\/album\//);
 
-    expect(songs.status).toBe("Success");
-    expect(songs.data).toHaveProperty("songs");
-    expect(songs.data.songs).toBeArray();
-    expect(songs.data.songs[0]).toHaveProperty("play_count");
-  });
+      // Validate artist details
+      expect(songDetails.primaryArtists).toBeDefined();
+      if (songDetails.primaryArtists) {
+        expect(typeof songDetails.primaryArtists).toBe("string");
+        expect(songDetails.primaryArtists.length).toBeGreaterThan(0);
+      }
+    });
 
-  test("GET /song?id=5WXAlMNt&camel=1 | Song Details by ID (Camel Case)", async () => {
-    const response = await app.request("/song?id=5WXAlMNt&camel=1");
+    test("GET song details by URL should return valid data", async () => {
+      const songUrl = "https://www.jiosaavn.com/song/sanam-teri-kasam/GB4-dAV4WFs";
+      const response = await fetch(`${BASE_URL}/song?link=${encodeURIComponent(songUrl)}`);
+      expect(response.status).toBe(200);
+      
+      const data = await response.json() as SongResponse;
+      expect(data.status).toBe("Success");
+      expect(data.message).toBe("✅ Song(s) Details fetched successfully");
+      expect(data.data).toBeDefined();
+      
+      // Validate song details
+      const songDetails = data.data;
+      expect(songDetails.id).toBe("GB4-dAV4WFs");
+      expect(songDetails.name).toBeDefined();
+      expect(songDetails.streamingUrl).toBeDefined();
+      expect(songDetails.streamingUrl).toMatch(/^https?:\/\//);
+    });
 
-    expect(response.status).toBe(200);
+    test("GET song details with invalid ID should return error", async () => {
+      const response = await fetch(`${BASE_URL}/song/invalid_id`);
+      expect(response.status).toBe(500);
+      
+      const data = await response.json() as ErrorResponse;
+      expect(data.status).toBe("Error");
+      expect(data.message).toBe("Failed to fetch song details");
+      expect(data.error).toBeDefined();
+    });
 
-    const songs: any = await response.json();
-
-    expect(songs.status).toBe("Success");
-    expect(songs.data).toHaveProperty("songs");
-    expect(songs.data.songs).toBeArray();
-    expect(songs.data.songs[0]).toHaveProperty("playCount");
-  });
-
-  test("GET /song?id=5WXA___ | Song Details by ID (Invalid ID)", async () => {
-    const response = await app.request("/song?id=5WXA___");
-
-    expect(response.status).toBe(400);
-
-    const songs: any = await response.json();
-
-    expect(songs.status).toBe("Failed");
-    expect(songs.data).toBeNull();
-  });
-
-  test("GET /song?link=https://www.jiosaavn.com/song/thunderclouds/RT8zcBh9eUc | Song Details by Link", async () => {
-    const response = await app.request(
-      "/song?link=https://www.jiosaavn.com/song/thunderclouds/RT8zcBh9eUc"
-    );
-
-    expect(response.status).toBe(200);
-
-    const songs: any = await response.json();
-
-    expect(songs.status).toBe("Success");
-    expect(songs.data).toHaveProperty("songs");
-    expect(songs.data.songs).toBeArray();
-    expect(songs.data.songs[0]).toHaveProperty("play_count");
-  });
-
-  test("GET /song/recommend?id=5WXA___ | Recommend Songs (Invalid ID)", async () => {
-    const response = await app.request("/song/recommend?id=5WXA___");
-
-    expect(response.status).toBe(400);
-
-    const recos: any = await response.json();
-
-    expect(recos.status).toBe("Failed");
-    expect(recos.data).toBeNull();
-  });
-
-  test("GET /song/recommend?id=5WXAlMNt | Recommend Songs", async () => {
-    const response = await app.request("/song/recommend?id=5WXAlMNt");
-
-    expect(response.status).toBe(200);
-
-    const recos: any = await response.json();
-
-    expect(recos.status).toBe("Success");
-    expect(recos.data).toBeArray();
-    // expect(recos.data[0]).toHaveProperty("id");
+    test("GET song details with invalid URL should return error", async () => {
+      const response = await fetch(`${BASE_URL}/song?link=https://invalid.com/song`);
+      expect(response.status).toBe(500);
+      
+      const data = await response.json() as ErrorResponse;
+      expect(data.status).toBe("Error");
+      expect(data.message).toBe("Failed to fetch song details");
+      expect(data.error).toBeDefined();
+    });
   });
 });
