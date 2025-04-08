@@ -13,13 +13,13 @@ import { showsPayload } from "../payloads/show.payload";
 import { episodeDetailPayload } from "../payloads/show.payload";
 
 const {
-  show_details: s,
-  episodes: e,
-  episode_details: e_d
+  show_details: showDetails,
+  episodes: episodes,
+  episode_details: episodeDetails
 } = config.endpoint.show;
 
 const {
-  top_shows: ts
+  top_shows: topShows
 } = config.endpoint.get;
 
 interface TopShowsResponse {

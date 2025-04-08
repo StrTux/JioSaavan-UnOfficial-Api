@@ -15,7 +15,7 @@ docs.get("/json", async (c) => {
     message: "JioSaavn API Documentation",
     data: {
       version: "1.0.0",
-      baseUrl: process.env.BASE_URL || "http://localhost:3001",
+      baseUrl: process.env.BASE_URL || "http://localhost:3500",
       endpoints: {
         search: {
           all: "GET /search?q={query}",

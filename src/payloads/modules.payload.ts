@@ -1,11 +1,6 @@
 import { decode } from "entities";
-
 import { createImageLinks, parseBool } from "../lib/utils";
 import { MiniResponse } from "../types/misc";
-import { AlbumResponse } from "../types/album";
-import { SongResponse } from "../types/song";
-import { PlaylistResponse } from "../types/playlist";
-import { RadioSongResponse } from "../types/radio";
 import {
   ArtistRecoRequest,
   ArtistRecoResponse,
@@ -98,13 +93,9 @@ export function modulesPayload(
       position: na_mod.position,
       source: "/get/albums",
       featured_text: decode(na_mod.featured_text ?? ""),
-      data: na.map((a) =>
-        mini
-          ? miniPayload(a)
-          : a.type === "song"
-            ? songPayload(a)
-            : albumPayload(a)
-      ),
+      data: mini 
+        ? na.map(miniPayload)
+        : na.map((a) => a.type === "song" ? songPayload(a) : albumPayload(a))
     },
 
     playlists: {

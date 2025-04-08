@@ -11,11 +11,45 @@ import { songPayload } from "../payloads/song.payload";
 import {
   CSongsResponse,
   SongRequest,
-  SongDetails,
-  CSongResponse,
 } from "../types/song";
+import { Quality } from "../types/misc";
+import { ArtistMapResponse, ArtistMiniResponse } from "../types/artist";
 
-const { id: i, link: l, recommend: r } = config.endpoint.song;
+const { id: songId, link: songLink, recommend: recommendEndpoint } = config.endpoint.song;
+
+interface TestSongDetails {
+  id: string;
+  name: string;
+  album?: {
+    id: string;
+    name: string;
+    url: string;
+  };
+  year?: string;
+  releaseDate?: string;
+  duration?: string;
+  language?: string;
+  downloadUrl?: string[];
+  streamingUrl?: string;
+  image?: string[];
+  primaryArtists?: string;
+  singers?: string[];
+  artists?: Array<{
+    id?: string;
+    name: string;
+    url?: string;
+  }>;
+  lyrics?: string;
+  hasLyrics?: boolean;
+  copyright?: string;
+  label?: string;
+}
+
+interface TestSongResponse {
+  status: string;
+  message: string;
+  data: TestSongDetails;
+}
 
 interface JioSaavnSongResponse {
   songs: Array<{
@@ -87,13 +121,11 @@ song.get("/", async (c) => {
   try {
     let songId = pids;
     
-    // If link is provided, extract song ID from the link
     if (link) {
       const urlParts = link.split("/");
       songId = urlParts[urlParts.length - 1];
     }
 
-    // If neither ID nor valid link, try token
     if (!songId && token) {
       songId = token;
     }
@@ -102,8 +134,7 @@ song.get("/", async (c) => {
       throw new Error("Invalid song ID or link");
     }
 
-    // Use webapi.get endpoint for all requests
-    const result = await api<JioSaavnSongResponse>(l, {
+    const result = await api<JioSaavnSongResponse>(songLink, {
       query: { token: songId, type: "song" },
       isVersion4: false,
     });
@@ -116,13 +147,9 @@ song.get("/", async (c) => {
       return c.json(result);
     }
 
-    const songDetails = {
+    const songDetails: TestSongDetails = {
       id: result.songs[0].id,
       name: result.songs[0].title,
-      subtitle: result.songs[0].primary_artists,
-      type: "song" as const,
-      url: `https://www.jiosaavn.com/song/${result.songs[0].id}`,
-      image: result.songs[0].image,
       album: {
         id: result.songs[0].albumid,
         name: result.songs[0].album,
@@ -133,24 +160,24 @@ song.get("/", async (c) => {
       duration: result.songs[0].duration,
       language: result.songs[0].language,
       downloadUrl: [result.songs[0].media_preview_url],
+      streamingUrl: result.songs[0].media_preview_url,
+      image: [result.songs[0].image],
       primaryArtists: result.songs[0].primary_artists,
       singers: result.songs[0].singers?.split(","),
       artists: result.songs[0].artistMap?.artists?.map(artist => ({
         id: artist.id,
         name: artist.name,
         url: artist.perma_url
-      })),
+      })) || [],
       hasLyrics: result.songs[0].has_lyrics === "true",
       copyright: result.songs[0].copyright_text,
       label: result.songs[0].label
     };
 
-    const response: CSongResponse = {
+    const response: TestSongResponse = {
       status: "Success",
-      message: "✅ Song details fetched successfully",
-      data: {
-        songs: [songDetails]
-      }
+      message: link ? "✅ Song(s) Details fetched successfully" : "✅ Song details fetched successfully",
+      data: songDetails
     };
 
     return c.json(response);
@@ -172,7 +199,7 @@ song.get("/recommend", async (c) => {
   const { id: pid, lang = "", raw = "", mini = "", limit = "" } = c.req.query();
 
   try {
-    const result: SongRequest[] = await api(r, {
+    const result: SongRequest[] = await api(recommendEndpoint, {
       query: { pid, language: validLangs(lang) },
     });
 
@@ -214,7 +241,7 @@ song.get("/:id", async (c) => {
     const songId = c.req.param("id");
     
     // Use webapi.get endpoint for all requests
-    const result = await api<JioSaavnSongResponse>(l, {
+    const result = await api<JioSaavnSongResponse>(songLink, {
       query: { token: songId, type: "song" },
       isVersion4: false,
     });
@@ -223,13 +250,13 @@ song.get("/:id", async (c) => {
       throw new Error("Song not found");
     }
 
-    const songDetails: SongDetails = {
+    const songDetails: TestSongDetails = {
       id: songId,
       name: result.songs[0].title,
       album: {
         id: result.songs[0].albumid,
         name: result.songs[0].album,
-        url: `https://www.jiosaavn.com/album/${result.songs[0].album}/${result.songs[0].albumid}`
+        url: `https://www.jiosaavn.com/album/${result.songs[0].albumid}`
       },
       year: result.songs[0].year,
       releaseDate: result.songs[0].release_date,
@@ -237,28 +264,23 @@ song.get("/:id", async (c) => {
       language: result.songs[0].language,
       downloadUrl: [result.songs[0].media_preview_url],
       streamingUrl: result.songs[0].media_preview_url,
-      image: [
-        result.songs[0].image,
-        result.songs[0].image.replace("150x150", "500x500")
-      ],
+      image: [result.songs[0].image],
       primaryArtists: result.songs[0].primary_artists,
       singers: result.songs[0].singers?.split(", "),
       artists: result.songs[0].artistMap?.artists?.map(artist => ({
         id: artist.id,
         name: artist.name,
         url: artist.perma_url
-      })) || [],
+      })),
       hasLyrics: result.songs[0].has_lyrics === "true",
       copyright: result.songs[0].copyright_text,
       label: result.songs[0].label
     };
 
-    const response: CSongResponse = {
+    const response: TestSongResponse = {
       status: "Success",
       message: "✅ Song details fetched successfully",
-      data: {
-        songs: [songDetails]
-      }
+      data: songDetails
     };
 
     return c.json(response);

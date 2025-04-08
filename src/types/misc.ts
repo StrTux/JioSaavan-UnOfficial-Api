@@ -32,12 +32,13 @@ export type MiniResponse = {
   url: string;
   image: Quality;
   color?: string;
-  duration?: number;
-  album?: string;
+  duration?: string | number;
+  album?: string | { id: string; name: string; url: string };
   album_id?: string;
   album_url?: string;
   download_url?: Quality;
   artist_map?: ArtistMapResponse;
   explicit?: boolean;
   list?: string;
+  list_count?: string | number;
 };
