@@ -1,5 +1,6 @@
 export * from "./album.route";
 export * from "./artist.route";
+export * from "./auth.route";
 export * from "./get.route";
 export * from "./home.route";
 export * from "./modules.route";

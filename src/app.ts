@@ -6,6 +6,7 @@ import { secureHeaders } from "hono/secure-headers";
 
 import { album } from "./routes/album.route";
 import { artist } from "./routes/artist.route";
+import { auth } from "./routes/auth.route";
 import { docs } from "./routes/docs.route";
 import { get } from "./routes/get.route";
 import { mood } from "./routes/mood.route";
@@ -27,13 +28,14 @@ app.use(
   cors({
     origin: "*",
     allowHeaders: ["Content-Type", "Authorization"],
-    allowMethods: ["GET", "HEAD", "OPTIONS"],
+    allowMethods: ["GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"],
     maxAge: 86400,
   })
 );
 
 app.route("/album", album);
 app.route("/artist", artist);
+app.route("/auth", auth);
 app.route("/docs", docs);
 app.route("/get", get);
 app.route("/mood", mood);

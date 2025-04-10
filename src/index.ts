@@ -25,6 +25,7 @@ import { trending } from "./routes/trending.route";
 import { mood } from "./routes/mood.route";
 import { podcast } from "./routes/podcast.route";
 import { topArtists } from "./routes/top-artists.route";
+import { auth } from "./routes/auth.route";
 import { CustomResponse } from "./types/response";
 
 const app = new Hono({ strict: false }); // match routes w/ or w/o trailing slash
@@ -34,7 +35,14 @@ const app = new Hono({ strict: false }); // match routes w/ or w/o trailing slas
  * -----------------------------------------------------------------------------------------------*/
 app.use(
   "*",
-  cors(),
+  cors({
+    origin: '*',
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization'],
+    exposeHeaders: ['Content-Length', 'X-Requested-With'],
+    credentials: true,
+    maxAge: 86400,
+  }),
   prettyJSON(),
   logger(),
   rateLimitMiddleware(),
@@ -49,6 +57,9 @@ app.use(
 app.get("/", (c) => {
   return c.redirect("/home");
 });
+
+/* auth */
+app.route("/auth", auth);
 
 /* home */
 app.route("/home", home);
