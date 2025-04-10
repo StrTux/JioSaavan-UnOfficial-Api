@@ -12,8 +12,6 @@ import {
   CSongsResponse,
   SongRequest,
 } from "../types/song";
-import { Quality } from "../types/misc";
-import { ArtistMapResponse, ArtistMiniResponse } from "../types/artist";
 
 const { id: songId, link: songLink, recommend: recommendEndpoint } = config.endpoint.song;
 
@@ -115,7 +113,6 @@ song.get("/", async (c) => {
     link = "",
     token = "",
     raw = "",
-    mini = "",
   } = c.req.query();
 
   try {
