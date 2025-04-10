@@ -13,9 +13,9 @@ import { showsPayload } from "../payloads/show.payload";
 import { episodeDetailPayload } from "../payloads/show.payload";
 
 const {
-  show_details: showDetails,
-  episodes: episodes,
-  episode_details: episodeDetails
+  // show_details: showDetails,
+  // episodes: episodes,
+  // episode_details: episodeDetails
 } = config.endpoint.show;
 
 const {
@@ -213,11 +213,11 @@ podcast.get("/", async (c) => {
   const { id = "", raw = "" } = c.req.query();
 
   if (!id) {
-    const error = {
+    const errorResponse = {
       status: "Failed",
       message: "Podcast ID is required"
     };
-    return c.json(error, 400);
+    return c.json(errorResponse, 400);
   }
 
   try {
