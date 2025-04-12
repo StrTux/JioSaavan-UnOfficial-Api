@@ -22,6 +22,12 @@ describe("Top Artists API Tests", () => {
         expect(firstArtist).toHaveProperty("image");
         expect(firstArtist).toHaveProperty("type", "artist");
         expect(firstArtist).toHaveProperty("role");
+        
+        // Verify the image URL is using 500x500 resolution
+        if (typeof firstArtist.image === 'string') {
+          expect(firstArtist.image).toContain("500x500");
+          expect(firstArtist.image).not.toContain("50x50");
+        }
       }
     });
 

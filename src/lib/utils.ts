@@ -14,10 +14,8 @@ export function createImageLinks(link: string): Quality {
 
   for (const q of qualities) {
     if (link.includes(q)) {
-      return qualities.map((quality) => ({
-        quality,
-        link: link.replace(q, quality),
-      }));
+      // Always replace with 500x500 instead of providing all resolutions
+      return link.replace(q, "500x500");
     }
   }
 

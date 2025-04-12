@@ -39,6 +39,12 @@ artist.use("*", async (c, next) => {
   const { artistid, link, token } = c.req.query();
   const path = "/" + c.req.path.split("/").slice(2).join("/");
 
+  // Skip validation for direct ID paths like /artist/464932
+  if (/^\/\d+$/.test(path)) {
+    await next();
+    return;
+  }
+
   if (path === "/") {
     if (!artistid && !link && !token)
       throw new Error("Please provide Artist id, link or token");
@@ -175,4 +181,61 @@ artist.get("/:path{(top-songs|recommend)}", async (c) => {
   };
 
   return c.json(response);
+});
+
+/* -----------------------------------------------------------------------------------------------
+ * Get Artist Songs by ID - GET /artist/:id (simpler URL for frontend usage)
+ * -----------------------------------------------------------------------------------------------*/
+
+/**
+ * Get Artist and Their Songs by Artist ID
+ * 
+ * This endpoint redirects to the search page for the artist,
+ * since direct ID lookup isn't reliable with the JioSaavn API.
+ * 
+ * URL: GET /artist/:id
+ * 
+ * Parameters:
+ * - id: Artist's unique identifier (path parameter)
+ * 
+ * Response:
+ * Redirects to /search?q={artist_name}&type=artist
+ */
+artist.get("/:id", async (c) => {
+  const artistId = c.req.param("id");
+  
+  try {
+    // Get the list of top artists to find the name for this ID
+    const topArtistsResponse = await fetch(`${config.urls.siteUrl}/top-artists?limit=30`);
+    const topArtistsData = await topArtistsResponse.json() as {
+      status: string;
+      message: string;
+      data: Array<{
+        id: string;
+        name: string;
+        url: string;
+        role: string;
+        type: string;
+        image: string;
+        songs_url: string;
+      }>;
+    };
+    
+    const foundArtist = topArtistsData.data.find((artist) => artist.id === artistId);
+    
+    if (foundArtist) {
+      // Redirect to search for this artist name
+      const searchUrl = `/search?q=${encodeURIComponent(foundArtist.name)}&type=artist`;
+      return c.redirect(searchUrl);
+    }
+    
+    // If we can't find the artist, redirect to search for the ID as fallback
+    return c.redirect(`/search?q=${artistId}&type=artist`);
+  } catch (error) {
+    console.error("Error processing artist redirect:", error);
+    return c.json({
+      status: "Failed",
+      message: "Failed to process artist request",
+    }, 500);
+  }
 });

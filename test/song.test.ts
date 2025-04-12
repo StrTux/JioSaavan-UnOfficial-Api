@@ -3,7 +3,8 @@ import { writeFileSync } from "fs";
 
 import { app } from "../src";
 
-const BASE_URL = "http://localhost:3500";
+// Updated base URL to use the external API
+const BASE_URL = "https://strtux-main.vercel.app";
 
 interface SongDetails {
   id: string;
@@ -96,7 +97,7 @@ describe("Song API Tests", () => {
     });
 
     test("GET song details by URL should return valid data", async () => {
-      const songUrl = "https://www.jiosaavn.com/song/sanam-teri-kasam/GB4-dAV4WFs";
+      const songUrl = "https://www.jiosaavn.com/song/raanjhan/Fz8qYCBZDh4";
       const response = await fetch(`${BASE_URL}/song?link=${encodeURIComponent(songUrl)}`);
       expect(response.status).toBe(200);
       

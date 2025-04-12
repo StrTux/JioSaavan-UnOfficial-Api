@@ -66,33 +66,48 @@ const podcast = new Hono();
 podcast.get("/trending", async (c) => {
   const { lang = "", raw = "" } = c.req.query();
 
-  const result = await api<TopShowsResponse>(config.endpoint.get.top_shows, {
-    query: { languages: validLangs(lang) }
-  });
+  try {
+    const result = await api<TopShowsResponse>(config.endpoint.get.top_shows, {
+      query: { languages: validLangs(lang) },
+      retries: 3
+    });
 
-  if (!result.trendingPodcasts?.length) {
-    throw new Error("Failed to fetch trending podcasts");
+    if (!result.trendingPodcasts?.length) {
+      console.error("No trending podcasts found in response:", result);
+      return c.json({
+        status: "Failed",
+        message: "Failed to fetch trending podcasts",
+        data: []
+      }, 500);
+    }
+
+    if (parseBool(raw)) {
+      return c.json(result);
+    }
+
+    const response = {
+      status: "Success",
+      message: "✅ Trending podcasts fetched successfully",
+      data: result.trendingPodcasts[0].items.map(item => ({
+        id: item.id,
+        title: item.title,
+        subtitle: item.subtitle,
+        type: item.type,
+        image: item.image,
+        url: item.perma_url,
+        explicit: parseBool(item.explicit_content)
+      }))
+    };
+
+    return c.json(response);
+  } catch (error) {
+    console.error("Error fetching trending podcasts:", error);
+    return c.json({
+      status: "Failed",
+      message: "Failed to fetch trending podcasts",
+      error: error instanceof Error ? error.message : "Unknown error"
+    }, 500);
   }
-
-  if (parseBool(raw)) {
-    return c.json(result);
-  }
-
-  const response = {
-    status: "Success",
-    message: "✅ Trending podcasts fetched successfully",
-    data: result.trendingPodcasts[0].items.map(item => ({
-      id: item.id,
-      title: item.title,
-      subtitle: item.subtitle,
-      type: item.type,
-      image: item.image,
-      url: item.perma_url,
-      explicit: parseBool(item.explicit_content)
-    }))
-  };
-
-  return c.json(response);
 });
 
 /* -----------------------------------------------------------------------------------------------
